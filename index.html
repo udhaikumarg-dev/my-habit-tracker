@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Habit Tracker</title>
+  
+  <!-- Mobile & PWA Configuration -->
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Habits">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='25' fill='%234f46e5'/%3E%3Cpath d='M30 50 L45 65 L72 35' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex items-center justify-center p-4 transition-colors duration-200">
+  <main class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 sm:p-8 transition-colors duration-200">
+    <header class="mb-5">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Daily Habit Tracker</h1>
+        <div class="flex items-center gap-1.5">
+          <button 
+            type="button" 
+            id="sound-toggle-btn"
+            title="Toggle sound effects"
+            class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-800 transition-colors"
+          >
+            <span id="sound-icon">🔔</span>
+          </button>
+          <button 
+            type="button" 
+            id="theme-toggle-btn"
+            title="Toggle dark/light mode"
+            class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-800 transition-colors"
+          >
+            <span id="theme-icon">🌙</span>
+          </button>
+          <span id="save-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 rounded-full border border-emerald-200 dark:border-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Auto-saved
+          </span>
+        </div>
+      </div>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Start small. Track your daily wins one checkmark at a time.</p>
+    </header>
+
+    <!-- Visual Progress Bar Section -->
+    <section class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 rounded-xl p-4 mb-6">
+      <div class="flex justify-between items-center text-xs font-semibold mb-2">
+        <span id="progress-percentage" class="text-indigo-600 dark:text-indigo-400">0% Completed</span>
+        <span id="progress-count" class="text-slate-500 dark:text-slate-400">0 of 0 habits</span>
+      </div>
+      <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+        <div id="progress-bar" class="bg-indigo-600 dark:bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+      <p id="celebration-note" class="hidden text-xs text-emerald-600 dark:text-emerald-400 font-medium text-center mt-2.5">
+        🎉 All habits completed for today! Awesome job!
+      </p>
+    </section>
+
+    <!-- Input Section with Category Selector -->
+    <form id="habit-form" class="space-y-2.5 mb-5">
+      <div class="flex gap-2">
+        <input 
+          type="text" 
+          id="habit-input" 
+          placeholder="Enter a new habit..." 
+          class="flex-1 px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+          autocomplete="off"
+          required
+        >
+        <button 
+          type="submit" 
+          id="add-btn"
+          class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
+        >
+          Add
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs">
+        <label for="habit-category" class="text-slate-500 dark:text-slate-400 font-medium">Category:</label>
+        <select 
+          id="habit-category" 
+          class="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+        >
+          <option value="Health">🏃 Health</option>
+          <option value="Learning">📚 Learning</option>
+          <option value="Mind">🧘 Mind</option>
+          <option value="Work">💼 Work</option>
+          <option value="Other">⭐ Other</option>
+        </select>
+      </div>
+    </form>
+
+    <!-- Filter Tabs & Actions -->
+    <div class="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center gap-1.5" role="tablist">
+        <button 
+          type="button" 
+          id="filter-all" 
+          class="filter-tab px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-indigo-600 text-white"
+        >
+          All <span id="count-all" class="ml-0.5 opacity-80">(0)</span>
+        </button>
+        <button 
+          type="button" 
+          id="filter-active" 
+          class="filter-tab px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+        >
+          Active <span id="count-active" class="ml-0.5 opacity-80">(0)</span>
+        </button>
+        <button 
+          type="button" 
+          id="filter-completed" 
+          class="filter-tab px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+        >
+          Done <span id="count-completed" class="ml-0.5 opacity-80">(0)</span>
+        </button>
+      </div>
+
+      <button 
+        type="button" 
+        id="reset-day-btn" 
+        title="Uncheck all habits to start a fresh day"
+        class="text-xs text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors px-2 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
+      >
+        ↺ Reset Day
+      </button>
+    </div>
+
+    <!-- Habit List -->
+    <section>
+      <ul id="habit-list" class="space-y-2.5">
+        <!-- Rendered dynamically -->
+      </ul>
+      <div id="empty-state" class="hidden text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
+        No habits match this filter.
+      </div>
+    </section>
+
+    <!-- Progress Summary -->
+    <footer class="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+      <span id="progress-text">0 of 0 completed</span>
+      <span class="font-medium text-indigo-600 dark:text-indigo-400">Step 8: Mobile PWA Manifest</span>
+    </footer>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'daily_habits_v1';
+    const THEME_KEY = 'daily_habits_theme';
+    const SOUND_KEY = 'daily_habits_sound';
+
+    // Audio & Confetti Setup
+    let audioCtx = null;
+    let isSoundMuted = false;
+    let wasAllCompleted = false;
+
+    const soundToggleBtn = document.getElementById('sound-toggle-btn');
+    const soundIcon = document.getElementById('sound-icon');
+
+    function initSound() {
+      try {
+        const saved = localStorage.getItem(SOUND_KEY);
+        if (saved === 'muted') {
+          isSoundMuted = true;
+          soundIcon.textContent = '🔕';
+        } else {
+          isSoundMuted = false;
+          soundIcon.textContent = '🔔';
+        }
+      } catch (e) {
+        console.warn('Unable to read sound setting:', e);
+      }
+    }
+
+    soundToggleBtn.addEventListener('click', () => {
+      isSoundMuted = !isSoundMuted;
+      soundIcon.textContent = isSoundMuted ? '🔕' : '🔔';
+      try {
+        localStorage.setItem(SOUND_KEY, isSoundMuted ? 'muted' : 'active');
+      } catch (e) {
+        console.warn('Unable to save sound setting:', e);
+      }
+    });
+
+    initSound();
+
+    // Synthesized celebratory chime using Web Audio API
+    function playCelebrationSound() {
+      if (isSoundMuted) return;
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          audioCtx = new AudioContextClass();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+
+        // Note 1: C5 (523.25 Hz)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(523.25, now);
+        gain1.gain.setValueAtTime(0.12, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Note 2: E5 (659.25 Hz)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(659.25, now + 0.12);
+        gain2.gain.setValueAtTime(0.15, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.5);
+
+        // Note 3: G5 (783.99 Hz)
+        const osc3 = audioCtx.createOscillator();
+        const gain3 = audioCtx.createGain();
+        osc3.type = 'sine';
+        osc3.frequency.setValueAtTime(783.99, now + 0.24);
+        gain3.gain.setValueAtTime(0.18, now + 0.24);
+        gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc3.connect(gain3);
+        gain3.connect(audioCtx.destination);
+        osc3.start(now + 0.24);
+        osc3.stop(now + 0.8);
+      } catch (e) {
+        console.warn('Audio playback error:', e);
+      }
+    }
+
+    // Trigger confetti particles
+    function launchConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 90,
+          spread: 60,
+          origin: { y: 0.65 }
+        });
+      }
+    }
+
+    // Theme Management
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = document.getElementById('theme-icon');
+
+    function initTheme() {
+      try {
+        const savedTheme = localStorage.getItem(THEME_KEY);
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+          themeIcon.textContent = '☀️';
+        } else {
+          document.documentElement.classList.remove('dark');
+          themeIcon.textContent = '🌙';
+        }
+      } catch (e) {
+        console.warn('Unable to read theme from localStorage:', e);
+      }
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+      try {
+        localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      } catch (e) {
+        console.warn('Unable to save theme to localStorage:', e);
+      }
+      renderHabits();
+    });
+
+    initTheme();
+
+    // Category dictionary for badges and labels
+    const CATEGORIES = {
+      Health: { 
+        label: '🏃 Health', 
+        classes: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60' 
+      },
+      Learning: { 
+        label: '📚 Learning', 
+        classes: 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800/60' 
+      },
+      Mind: { 
+        label: '🧘 Mind', 
+        classes: 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60' 
+      },
+      Work: { 
+        label: '💼 Work', 
+        classes: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60' 
+      },
+      Other: { 
+        label: '⭐ Other', 
+        classes: 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700' 
+      }
+    };
+
+    // State
+    let currentFilter = 'all';
+    let habits = loadHabits();
+
+    function loadHabits() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map(h => ({
+              ...h,
+              category: h.category && CATEGORIES[h.category] ? h.category : 'Health',
+              streak: typeof h.streak === 'number' ? h.streak : (h.completed ? 1 : 0)
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn('Unable to read localStorage:', e);
+      }
+      return [
+        { id: 1, text: "Drink 2 liters of water", completed: false, streak: 3, category: 'Health' },
+        { id: 2, text: "Read for 15 minutes", completed: true, streak: 5, category: 'Learning' },
+        { id: 3, text: "Take a 20-minute walk", completed: false, streak: 2, category: 'Health' }
+      ];
+    }
+
+    function saveHabits() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+      } catch (e) {
+        console.warn('Unable to save to localStorage:', e);
+      }
+    }
+
+    // DOM Elements
+    const form = document.getElementById('habit-form');
+    const input = document.getElementById('habit-input');
+    const categorySelect = document.getElementById('habit-category');
+    const list = document.getElementById('habit-list');
+    const emptyState = document.getElementById('empty-state');
+    const progressText = document.getElementById('progress-text');
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const progressCount = document.getElementById('progress-count');
+    const celebrationNote = document.getElementById('celebration-note');
+
+    const filterAllBtn = document.getElementById('filter-all');
+    const filterActiveBtn = document.getElementById('filter-active');
+    const filterCompletedBtn = document.getElementById('filter-completed');
+    const countAllSpan = document.getElementById('count-all');
+    const countActiveSpan = document.getElementById('count-active');
+    const countCompletedSpan = document.getElementById('count-completed');
+    const resetDayBtn = document.getElementById('reset-day-btn');
+
+    // Filter switching
+    function setFilter(newFilter) {
+      currentFilter = newFilter;
+      const tabs = [
+        { btn: filterAllBtn, key: 'all' },
+        { btn: filterActiveBtn, key: 'active' },
+        { btn: filterCompletedBtn, key: 'completed' }
+      ];
+
+      tabs.forEach(({ btn, key }) => {
+        if (key === currentFilter) {
+          btn.className = 'filter-tab px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-indigo-600 text-white';
+        } else {
+          btn.className = 'filter-tab px-3 py-1 rounded-lg text-xs font-medium transition-colors bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700';
+        }
+      });
+
+      renderHabits();
+    }
+
+    filterAllBtn.addEventListener('click', () => setFilter('all'));
+    filterActiveBtn.addEventListener('click', () => setFilter('active'));
+    filterCompletedBtn.addEventListener('click', () => setFilter('completed'));
+
+    // Reset Day: uncheck all habits for a fresh day
+    resetDayBtn.addEventListener('click', () => {
+      if (habits.length === 0) return;
+      habits = habits.map(h => ({ ...h, completed: false }));
+      wasAllCompleted = false;
+      saveHabits();
+      renderHabits();
+    });
+
+    // Render habits to screen
+    function renderHabits() {
+      list.innerHTML = '';
+
+      // Update filter counts
+      const activeCount = habits.filter(h => !h.completed).length;
+      const completedCount = habits.filter(h => h.completed).length;
+      countAllSpan.textContent = `(${habits.length})`;
+      countActiveSpan.textContent = `(${activeCount})`;
+      countCompletedSpan.textContent = `(${completedCount})`;
+
+      // Filter list for display
+      const filtered = habits.filter(habit => {
+        if (currentFilter === 'active') return !habit.completed;
+        if (currentFilter === 'completed') return habit.completed;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        if (habits.length === 0) {
+          emptyState.textContent = 'No habits yet. Add one above to get started!';
+        } else {
+          emptyState.textContent = `No ${currentFilter === 'active' ? 'active' : 'completed'} habits right now.`;
+        }
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      filtered.forEach(habit => {
+        const li = document.createElement('li');
+        li.className = `flex items-center justify-between p-3 rounded-xl border transition-all ${
+          habit.completed 
+            ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800/60 text-slate-400 dark:text-slate-500' 
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-sm'
+        }`;
+
+        // Left container: checkbox + label + category badge
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'flex items-center gap-3 cursor-pointer flex-1 mr-2';
+        leftDiv.addEventListener('click', () => toggleHabit(habit.id));
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = habit.completed;
+        checkbox.className = 'w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 cursor-pointer pointer-events-none';
+
+        const textWrapper = document.createElement('div');
+        textWrapper.className = 'flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2';
+
+        const span = document.createElement('span');
+        span.className = `text-sm font-medium ${
+          habit.completed 
+            ? 'line-through text-slate-400 dark:text-slate-500' 
+            : 'text-slate-800 dark:text-slate-100'
+        }`;
+        span.textContent = habit.text;
+
+        // Category pill badge
+        const catInfo = CATEGORIES[habit.category] || CATEGORIES.Other;
+        const catBadge = document.createElement('span');
+        catBadge.className = `inline-flex items-center text-[11px] px-2 py-0.5 rounded-md border font-normal ${catInfo.classes} ${habit.completed ? 'opacity-50' : ''}`;
+        catBadge.textContent = catInfo.label;
+
+        textWrapper.appendChild(span);
+        textWrapper.appendChild(catBadge);
+
+        leftDiv.appendChild(checkbox);
+        leftDiv.appendChild(textWrapper);
+
+        // Right container: streak badge + delete button
+        const rightDiv = document.createElement('div');
+        rightDiv.className = 'flex items-center gap-2';
+
+        // Streak badge
+        const streakBadge = document.createElement('span');
+        streakBadge.className = `inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+          habit.completed 
+            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300' 
+            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+        }`;
+        streakBadge.innerHTML = `🔥 ${habit.streak || 0}d`;
+        streakBadge.title = `${habit.streak || 0} day streak`;
+
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.setAttribute('aria-label', 'Delete habit');
+        deleteBtn.className = 'text-slate-400 hover:text-red-500 text-lg font-bold px-2 py-1 transition-colors';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteHabit(habit.id);
+        });
+
+        rightDiv.appendChild(streakBadge);
+        rightDiv.appendChild(deleteBtn);
+
+        li.appendChild(leftDiv);
+        li.appendChild(rightDiv);
+        list.appendChild(li);
+      });
+
+      updateProgress();
+    }
+
+    // Toggle habit status and adjust streak
+    function toggleHabit(id) {
+      habits = habits.map(h => {
+        if (h.id === id) {
+          const nextCompleted = !h.completed;
+          const currentStreak = h.streak || 0;
+          return {
+            ...h,
+            completed: nextCompleted,
+            streak: nextCompleted ? currentStreak + 1 : Math.max(0, currentStreak - 1)
+          };
+        }
+        return h;
+      });
+      saveHabits();
+      renderHabits();
+    }
+
+    // Delete habit
+    function deleteHabit(id) {
+      habits = habits.filter(h => h.id !== id);
+      saveHabits();
+      renderHabits();
+    }
+
+    // Add new habit
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+
+      const category = categorySelect.value || 'Health';
+
+      habits.push({
+        id: Date.now(),
+        text: text,
+        category: category,
+        completed: false,
+        streak: 0
+      });
+
+      saveHabits();
+      input.value = '';
+      renderHabits();
+    });
+
+    // Update progress bar and trigger celebration
+    function updateProgress() {
+      const total = habits.length;
+      const completedCount = habits.filter(h => h.completed).length;
+      const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+      progressBar.style.width = `${percent}%`;
+      progressPercentage.textContent = `${percent}% Completed`;
+      progressCount.textContent = `${completedCount} of ${total} habits`;
+      progressText.textContent = `${completedCount} of ${total} completed`;
+
+      const isAllDone = total > 0 && completedCount === total;
+
+      if (isAllDone) {
+        celebrationNote.classList.remove('hidden');
+        progressBar.classList.remove('bg-indigo-600', 'dark:bg-indigo-500');
+        progressBar.classList.add('bg-emerald-500');
+
+        // Fire celebration only on fresh completion transition
+        if (!wasAllCompleted) {
+          playCelebrationSound();
+          launchConfetti();
+        }
+      } else {
+        celebrationNote.classList.add('hidden');
+        progressBar.classList.remove('bg-emerald-500');
+        progressBar.classList.add('bg-indigo-600', 'dark:bg-indigo-500');
+      }
+
+      wasAllCompleted = isAllDone;
+    }
+
+    // Initial render
+    renderHabits();
+  </script>
+</body>
+</html>
